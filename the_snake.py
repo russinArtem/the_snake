@@ -75,7 +75,7 @@ class Apple(GameObject):
     действия с ним.
     """
 
-    def __init__(self, body_color, employed_position):
+    def __init__(self, body_color=None, employed_position=[]):
         super().__init__(body_color)
         self.randomize_position(employed_position)
 
@@ -97,7 +97,7 @@ class Snake(GameObject):
     её поведение.
     """
 
-    def __init__(self, body_color):
+    def __init__(self, body_color=None):
         super().__init__(body_color)
         self.reset()
         self.record_length = 1
