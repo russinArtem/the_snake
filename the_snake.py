@@ -75,7 +75,7 @@ class Apple(GameObject):
     действия с ним.
     """
 
-    def __init__(self, body_color=None, employed_position=[]):
+    def __init__(self, body_color=None, employed_position=None):
         super().__init__(body_color)
         self.randomize_position(employed_position)
 
@@ -83,13 +83,14 @@ class Apple(GameObject):
         """Устанавливает случайное положение яблока в пределах игрового поля,
         проверяя, что оно не совпадает с позицией змейки.
         """
-        while True:
-            self.position = (
-                randint(0, GRID_WIDTH - 1) * GRID_SIZE,
-                randint(0, GRID_HEIGHT - 1) * GRID_SIZE
-            )
-            if self.position not in employed_position:
-                break
+        if employed_position is not None:
+            while True:
+                self.position = (
+                    randint(0, GRID_WIDTH - 1) * GRID_SIZE,
+                    randint(0, GRID_HEIGHT - 1) * GRID_SIZE
+                )
+                if self.position not in employed_position:
+                    break
 
 
 class Snake(GameObject):
