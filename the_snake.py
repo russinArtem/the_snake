@@ -86,7 +86,7 @@ class Apple(GameObject):
 
     def __init__(
         self,
-        employed_positions=[START_POSITION],
+        employed_positions,
         body_color=APPLE_COLOR
     ):
         super().__init__(body_color)
@@ -115,9 +115,6 @@ class Snake(GameObject):
     def update_direction(self, new_direction):
         """Метод обновления направления после нажатия на кнопку."""
         self.direction = new_direction
-        # if self.next_direction:
-        #     self.direction = self.next_direction
-        #     self.next_direction = None
 
     def move(self):
         """Обновляет позицию змейки (координаты каждой секции)."""
@@ -159,7 +156,6 @@ class Snake(GameObject):
         self.positions = [START_POSITION]
         self.direction = direction
         self.last = None
-        # self.next_direction = None
 
 
 def handle_keys(snake, speed):
@@ -198,7 +194,6 @@ def main():
         clock.tick(speed)
 
         speed = handle_keys(snake, speed)
-        # snake.update_direction()
         snake.move()
         if snake.get_head_position() == apple.position:
             apple.randomize_position(snake.positions)
