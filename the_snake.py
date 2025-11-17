@@ -10,12 +10,16 @@ GRID_HEIGHT = SCREEN_HEIGHT // GRID_SIZE
 
 # Все ячейки игрового поля:
 ALL_CELLS = set(
-    (x * GRID_SIZE, y * GRID_SIZE)
-    for x in range(GRID_WIDTH) for y in range(GRID_HEIGHT)
+    (
+        x * GRID_SIZE,
+        y * GRID_SIZE,
+    )
+    for x in range(GRID_WIDTH)
+    for y in range(GRID_HEIGHT)
 )
 
 # Стартовая позиция игрового объекта:
-START_POSITION = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
+CENTRAL_POSITION = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
 
 # Направления движения змейки:
 UP = (0, -1)
@@ -33,6 +37,14 @@ TURNS = {
     (DOWN, pg.K_LEFT): LEFT,
     (UP, pg.K_RIGHT): RIGHT,
     (DOWN, pg.K_RIGHT): RIGHT,
+    (LEFT, pg.K_s): DOWN,
+    (RIGHT, pg.K_s): DOWN,
+    (LEFT, pg.K_w): UP,
+    (RIGHT, pg.K_w): UP,
+    (UP, pg.K_a): LEFT,
+    (DOWN, pg.K_a): LEFT,
+    (UP, pg.K_d): RIGHT,
+    (DOWN, pg.K_d): RIGHT,
 }
 
 # Константы для скорости движения змейки:
@@ -56,25 +68,22 @@ class GameObject:
     """Базовый класс, от которого наследуются другие игровые объекты."""
 
     def __init__(self, body_color=None):
-        self.position = START_POSITION
+        self.position = CENTRAL_POSITION
         self.body_color = body_color
 
     def draw(self):
         """Абстрактный метод для отрисовки объекта на экране.
         Переопределяется в дочерних классах.
         """
-        raise Exception(
-            f'Произошла ошибка: '
-            f'в классе {type(self).__name__} не определен метод draw().'
+        raise NotImplementedError(
+            f'В классе {type(self).__name__} не определен метод draw().'
         )
 
     def draw_position(self, position, body_color=None):
         """Метод для отрисовки ячейки"""
         body_color = body_color or self.body_color
-
         rect = pg.Rect(position, (GRID_SIZE, GRID_SIZE))
         pg.draw.rect(screen, body_color, rect)
-
         if body_color == self.body_color:
             pg.draw.rect(screen, BORDER_COLOR, rect, 1)
 
@@ -86,8 +95,6 @@ class Apple(GameObject):
 
     def __init__(
         self,
-        # Не прохожу автотесты с обязательным параметром employed_positions,
-        # даже если передаю в него аргумент.
         employed_positions=None,
         body_color=APPLE_COLOR
     ):
@@ -98,7 +105,7 @@ class Apple(GameObject):
         """Устанавливает случайное положение яблока в пределах игрового поля,
         проверяя, что оно не совпадает с позицией змейки.
         """
-        if employed_positions is not None:  # Нужно для прохождения автотестов.
+        if employed_positions is not None:
             self.position = choice(tuple(ALL_CELLS - set(employed_positions)))
 
     def draw(self):
@@ -111,9 +118,9 @@ class Snake(GameObject):
     её поведение.
     """
 
-    def __init__(self, body_color=SNAKE_COLOR):
+    def __init__(self, direction=RIGHT, body_color=SNAKE_COLOR):
         super().__init__(body_color)
-        self.reset()
+        self.reset(direction)
 
     def update_direction(self, new_direction):
         """Метод обновления направления после нажатия на кнопку."""
@@ -123,16 +130,15 @@ class Snake(GameObject):
         """Обновляет позицию змейки (координаты каждой секции)."""
         px, py = self.get_head_position()
         dx, dy = self.direction
-        self.positions.insert(
-            0,
-            (
-                (px + dx * GRID_SIZE) % SCREEN_WIDTH,
-                (py + dy * GRID_SIZE) % SCREEN_HEIGHT
-            )
+        self.positions.insert(0, (
+            (px + dx * GRID_SIZE) % SCREEN_WIDTH,
+            (py + dy * GRID_SIZE) % SCREEN_HEIGHT,
+        ))
+        self.last = (
+            self.positions.pop()
+            if len(self.positions) > self.length
+            else self.positions[-1]
         )
-        self.last = self.positions[-1]
-        if len(self.positions) > self.length:
-            self.last = self.positions.pop()
 
     def draw(self):
         """Отрисовывает змейку на экране, затирая след."""
@@ -143,21 +149,21 @@ class Snake(GameObject):
         if self.last:
             self.draw_position(self.last, BOARD_BACKGROUND_COLOR)
 
-    def check_queue(self):
+    def head_body_collision(self):
         """Возвращает True, если координаты головы и тела змейки совпали."""
-        if self.get_head_position() in self.positions[4:]:
+        if self.length >= 5 and self.get_head_position() in self.positions[4:]:
             return True
+        return False
 
     def get_head_position(self):
         """Возвращает позицию головы змейки."""
         return self.positions[0]
 
-    def reset(self, direction=RIGHT, record_length=1):
+    def reset(self, direction=None):
         """Сбрасывает змейку в начальное состояние."""
         self.length = 1
-        self.record_length = record_length
-        self.positions = [START_POSITION]
-        self.direction = direction
+        self.positions = [CENTRAL_POSITION]
+        self.direction = direction or choice([UP, DOWN, LEFT, RIGHT])
         self.last = None
 
 
@@ -165,6 +171,11 @@ def handle_keys(snake, speed):
     """Обрабатывает нажатия клавиш,
     чтобы изменить направление и скорость движения змейки.
     """
+    SPEED_CHANGE_KEYS = {
+        'Увеличение скорости': [pg.K_KP_PLUS, pg.K_PLUS, pg.K_EQUALS],
+        'Уменьшение скорости': [pg.K_KP_MINUS, pg.K_MINUS, pg.K_UNDERSCORE],
+        'Скорость по умолчанию': [pg.K_SPACE],
+    }
     for event in pg.event.get():
         if (event.type == pg.QUIT) or (
             event.type == pg.KEYDOWN and event.key == pg.K_ESCAPE
@@ -172,12 +183,12 @@ def handle_keys(snake, speed):
             pg.quit()
             raise SystemExit
         if event.type == pg.KEYDOWN:
-            if event.key == pg.K_KP_PLUS:
-                speed = min(speed + SPEED_CHANGE, MAX_SPEED)
-            elif event.key == pg.K_KP_MINUS:
-                speed = max(speed - SPEED_CHANGE, MIN_SPEED)
-            elif event.key == pg.K_SPACE:
-                speed = SPEED_START
+            if event.key in SPEED_CHANGE_KEYS['Увеличение скорости']:
+                return min(speed + SPEED_CHANGE, MAX_SPEED)
+            elif event.key in SPEED_CHANGE_KEYS['Уменьшение скорости']:
+                return max(speed - SPEED_CHANGE, MIN_SPEED)
+            elif event.key in SPEED_CHANGE_KEYS['Скорость по умолчанию']:
+                return SPEED_START
             else:
                 snake.update_direction(
                     TURNS.get((snake.direction, event.key), snake.direction)
@@ -192,6 +203,7 @@ def main():
     snake = Snake()
     apple = Apple(snake.positions)
     speed = SPEED_START
+    record_length = 1
 
     while True:
         clock.tick(speed)
@@ -201,9 +213,9 @@ def main():
         if snake.get_head_position() == apple.position:
             apple.randomize_position(snake.positions)
             snake.length += 1
-            snake.record_length = max(snake.record_length, snake.length)
-        elif snake.length >= 5 and snake.check_queue():
-            snake.reset(choice([UP, DOWN, LEFT, RIGHT]), snake.record_length)
+            record_length = max(record_length, snake.length)
+        elif snake.head_body_collision():
+            snake.reset()
             speed = SPEED_START
             screen.fill(BOARD_BACKGROUND_COLOR)
             apple.randomize_position(snake.positions)
@@ -211,11 +223,9 @@ def main():
         apple.draw()
         pg.display.update()
         pg.display.set_caption(
-            f'Скорость: {speed}. '
-            f'Изм. скорости: клавиши +/-. '
-            f'Тек. длина: {snake.length}. '
-            f'Рекорд: {snake.record_length}. '
-            f'Выход - Esc.'
+            f'Упр. скоростью({speed}): +, -, пробел. '
+            f'Длина: {snake.length}. Рекорд: {record_length}. '
+            f'Выход: Esc.'
         )
 
 
