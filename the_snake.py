@@ -151,9 +151,10 @@ class Snake(GameObject):
 
     def head_body_collision(self):
         """Возвращает True, если координаты головы и тела змейки совпали."""
-        if self.length >= 5 and self.get_head_position() in self.positions[4:]:
-            return True
-        return False
+        return (
+            self.length >= 5
+            and self.get_head_position() in self.positions[4:]
+        )
 
     def get_head_position(self):
         """Возвращает позицию головы змейки."""
