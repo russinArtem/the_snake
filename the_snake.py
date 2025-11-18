@@ -53,6 +53,13 @@ SPEED_CHANGE = 5
 MIN_SPEED = 5
 MAX_SPEED = 30
 
+# Клавиши для управления скоростью движения змейки:
+SPEED_CHANGE_KEYS = {
+    'Увеличение скорости': [pg.K_KP_PLUS, pg.K_PLUS, pg.K_EQUALS],
+    'Уменьшение скорости': [pg.K_KP_MINUS, pg.K_MINUS, pg.K_UNDERSCORE],
+    'Скорость по умолчанию': [pg.K_SPACE],
+}
+
 # Цвета элементов интерфейса:
 BOARD_BACKGROUND_COLOR = (192, 192, 192)
 BORDER_COLOR = (93, 216, 228)
@@ -95,7 +102,7 @@ class Apple(GameObject):
 
     def __init__(
         self,
-        employed_positions=None,
+        employed_positions=[],
         body_color=APPLE_COLOR
     ):
         super().__init__(body_color)
@@ -105,8 +112,7 @@ class Apple(GameObject):
         """Устанавливает случайное положение яблока в пределах игрового поля,
         проверяя, что оно не совпадает с позицией змейки.
         """
-        if employed_positions is not None:
-            self.position = choice(tuple(ALL_CELLS - set(employed_positions)))
+        self.position = choice(tuple(ALL_CELLS - set(employed_positions)))
 
     def draw(self):
         """Отрисовывает яблоко на игровой поверхности."""
@@ -172,11 +178,6 @@ def handle_keys(snake, speed):
     """Обрабатывает нажатия клавиш,
     чтобы изменить направление и скорость движения змейки.
     """
-    SPEED_CHANGE_KEYS = {
-        'Увеличение скорости': [pg.K_KP_PLUS, pg.K_PLUS, pg.K_EQUALS],
-        'Уменьшение скорости': [pg.K_KP_MINUS, pg.K_MINUS, pg.K_UNDERSCORE],
-        'Скорость по умолчанию': [pg.K_SPACE],
-    }
     for event in pg.event.get():
         if (event.type == pg.QUIT) or (
             event.type == pg.KEYDOWN and event.key == pg.K_ESCAPE
@@ -186,14 +187,13 @@ def handle_keys(snake, speed):
         if event.type == pg.KEYDOWN:
             if event.key in SPEED_CHANGE_KEYS['Увеличение скорости']:
                 return min(speed + SPEED_CHANGE, MAX_SPEED)
-            elif event.key in SPEED_CHANGE_KEYS['Уменьшение скорости']:
+            if event.key in SPEED_CHANGE_KEYS['Уменьшение скорости']:
                 return max(speed - SPEED_CHANGE, MIN_SPEED)
-            elif event.key in SPEED_CHANGE_KEYS['Скорость по умолчанию']:
+            if event.key in SPEED_CHANGE_KEYS['Скорость по умолчанию']:
                 return SPEED_START
-            else:
-                snake.update_direction(
-                    TURNS.get((snake.direction, event.key), snake.direction)
-                )
+            snake.update_direction(
+                TURNS.get((snake.direction, event.key), snake.direction)
+            )
     return speed
 
 
